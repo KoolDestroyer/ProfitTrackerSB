@@ -27,7 +27,7 @@ object ProfitTrackerClient : ClientModInitializer {
         configManager = ConfigManager(client.runDirectory.toPath().resolve("config"))
         config = configManager.load()
         trackerService = ProfitTrackerService()
-        suggestionService = SuggestionService()
+        suggestionService = SuggestionService(client)
         hudRenderer = HudRenderer(client, trackerService, config)
 
         val openConfigKeybind = KeyBindingHelper.registerKeyBinding(
