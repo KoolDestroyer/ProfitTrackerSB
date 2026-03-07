@@ -20,74 +20,49 @@ class ProfitTrackerConfigScreen(
 ) : Screen(Text.literal("Profit Tracker Config")) {
     private lateinit var searchField: TextFieldWidget
     private lateinit var idleField: TextFieldWidget
-    private lateinit var itemIdField: TextFieldWidget
-    private lateinit var displayNameField: TextFieldWidget
-    private lateinit var valueField: TextFieldWidget
-
     private val widget = TrackedItemsWidget(config.trackedItems)
-    private var selectedIndex = -1
+    private var selectedIndex: Int = -1
     private var lastInteractionTime = System.currentTimeMillis()
 
     override fun init() {
-        val cx = width / 2
-        val top = 20
+        val centerX = width / 2
+        val panelTop = 20
 
-        searchField = addField(cx - 160, top + 14, 320, "Search")
-        idleField = addField(cx - 160, top + 44, 70, "Idle seconds", config.idleSeconds.toString())
-        itemIdField = addField(cx - 160, top + 74, 200, "Item ID")
-        displayNameField = addField(cx + 45, top + 74, 115, "Display")
-        valueField = addField(cx - 160, top + 104, 120, "Value")
+        searchField = TextFieldWidget(textRenderer, centerX - 150, panelTop + 12, 300, 20, Text.literal("Search"))
+        searchField.setChangedListener { touch() }
+        addDrawableChild(searchField)
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Pick Suggestion")) {
-            touch()
-            val suggestion = suggestionService.complete(searchField.text, 1).firstOrNull() ?: return@builder
-            itemIdField.text = suggestion.itemId
-            displayNameField.text = suggestion.displayName
-        }.dimensions(cx - 35, top + 104, 130, 20).build())
+        idleField = TextFieldWidget(textRenderer, centerX - 150, panelTop + 36, 80, 20, Text.literal("Idle"))
+        idleField.text = config.idleSeconds.toString()
+        idleField.setChangedListener { touch() }
+        addDrawableChild(idleField)
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Add")) {
             touch()
-            val item = formItem() ?: return@builder
-            widget.add(item)
-            selectedIndex = config.trackedItems.lastIndex
-        }.dimensions(cx + 100, top + 104, 60, 20).build())
-
-        addDrawableChild(ButtonWidget.builder(Text.literal("Apply Edit")) {
-            touch()
-            if (selectedIndex !in config.trackedItems.indices) return@builder
-            val item = formItem() ?: return@builder
-            widget.update(selectedIndex, item)
-        }.dimensions(cx - 160, top + 132, 90, 20).build())
-
-        addDrawableChild(ButtonWidget.builder(Text.literal("Toggle")) {
-            touch()
-            widget.toggle(selectedIndex)
-            syncFormFromSelected()
-        }.dimensions(cx - 65, top + 132, 55, 20).build())
-
-        addDrawableChild(ButtonWidget.builder(Text.literal("Up")) {
-            touch()
-            widget.moveUp(selectedIndex)
-            if (selectedIndex > 0) selectedIndex--
-        }.dimensions(cx - 5, top + 132, 40, 20).build())
-
-        addDrawableChild(ButtonWidget.builder(Text.literal("Down")) {
-            touch()
-            widget.moveDown(selectedIndex)
-            if (selectedIndex in 0 until config.trackedItems.lastIndex) selectedIndex++
-        }.dimensions(cx + 40, top + 132, 50, 20).build())
+            val selected = suggestionService.complete(searchField.text, 1).firstOrNull()
+            if (selected != null) {
+                widget.add(TrackedItem(selected.itemId, selected.displayName, 1_000L, true))
+            }
+        }.dimensions(centerX - 60, panelTop + 36, 50, 20).build())
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Remove")) {
             touch()
             widget.remove(selectedIndex)
             selectedIndex = -1
-            clearEditFields()
-        }.dimensions(cx + 95, top + 132, 65, 20).build())
+        }.dimensions(centerX - 5, panelTop + 36, 70, 20).build())
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("Up")) {
+            touch(); widget.moveUp(selectedIndex); selectedIndex = (selectedIndex - 1).coerceAtLeast(0)
+        }.dimensions(centerX + 70, panelTop + 36, 40, 20).build())
+
+        addDrawableChild(ButtonWidget.builder(Text.literal("Down")) {
+            touch(); widget.moveDown(selectedIndex); selectedIndex = (selectedIndex + 1).coerceAtMost(config.trackedItems.lastIndex)
+        }.dimensions(centerX + 115, panelTop + 36, 50, 20).build())
     }
 
     override fun tick() {
         super.tick()
-        if (System.currentTimeMillis() - lastInteractionTime > 10_000L) {
+        if (System.currentTimeMillis() - lastInteractionTime > 10_000) {
             close()
         }
     }
@@ -96,40 +71,37 @@ class ProfitTrackerConfigScreen(
         renderBackground(context, mouseX, mouseY, delta)
         hudRenderer.render(context, preview = true)
 
-        val cx = width / 2
-        val top = 20
-        val left = cx - 180
-        val right = cx + 180
-        val bottom = height - 20
+        val centerX = width / 2
+        val panelTop = 20
+        val panelLeft = centerX - 170
+        val panelRight = centerX + 170
+        val panelBottom = height - 20
 
-        context.fill(left, top, right, bottom, 0xCC111111.toInt())
-        context.drawBorder(left, top, right - left, bottom - top, 0xFFFFFFFF.toInt())
+        context.fill(panelLeft, panelTop, panelRight, panelBottom, 0xCC101010.toInt())
+        context.drawBorder(panelLeft, panelTop, panelRight - panelLeft, panelBottom - panelTop, 0xFFFFFFFF.toInt())
+        context.drawText(textRenderer, "Search item", centerX - 150, panelTop + 2, 0xFFFFFF, false)
+        context.drawText(textRenderer, "Idle sec", centerX - 150, panelTop + 26, 0xFFFFFF, false)
+        context.drawText(textRenderer, "Tracked items", centerX - 150, panelTop + 64, 0xFFFFFF, false)
 
-        context.drawText(textRenderer, "Search", cx - 160, top + 4, 0xFFFFFF, false)
-        context.drawText(textRenderer, "Idle", cx - 160, top + 34, 0xFFFFFF, false)
-        context.drawText(textRenderer, "Item id", cx - 160, top + 64, 0xFFFFFF, false)
-        context.drawText(textRenderer, "Display", cx + 45, top + 64, 0xFFFFFF, false)
-        context.drawText(textRenderer, "Value", cx - 160, top + 94, 0xFFFFFF, false)
-
-        suggestionService.complete(searchField.text).forEachIndexed { index, s ->
+        val suggestions = suggestionService.complete(searchField.text)
+        suggestions.forEachIndexed { index, suggestion ->
             context.drawText(
                 textRenderer,
-                "${index + 1}. ${s.displayName} (${s.itemId})",
-                cx - 160,
-                top + 160 + index * 10,
-                0xBBD0FF,
+                "${index + 1}. ${suggestion.displayName} (${suggestion.itemId})",
+                centerX - 150,
+                panelTop + 86 + (index * 10),
+                0xAAAACC,
                 false
             )
         }
 
-        config.trackedItems.forEachIndexed { idx, item ->
-            val rowY = top + 220 + idx * 11
-            if (rowY > bottom - 10) return@forEachIndexed
-            val color = if (idx == selectedIndex) 0xFFFF55 else 0xFFFFFF
+        config.trackedItems.forEachIndexed { index, trackedItem ->
+            val color = if (index == selectedIndex) 0xFFFFFF00.toInt() else 0xFFFFFFFF.toInt()
+            val rowY = panelTop + 150 + index * 12
             context.drawText(
                 textRenderer,
-                "${if (item.enabled) "[x]" else "[ ]"} ${item.displayName} (${item.itemId}) = ${item.value}",
-                cx - 160,
+                "${if (trackedItem.enabled) "[x]" else "[ ]"} ${trackedItem.displayName} ${trackedItem.value}",
+                centerX - 150,
                 rowY,
                 color,
                 false
@@ -141,24 +113,25 @@ class ProfitTrackerConfigScreen(
 
     override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
         touch()
-        val cx = width / 2
-        val top = 20
-        val left = cx - 180
-        val right = cx + 180
-        val bottom = height - 20
+        val centerX = width / 2
+        val panelTop = 20
+        val panelLeft = centerX - 170
+        val panelRight = centerX + 170
+        val panelBottom = height - 20
 
-        if (mouseX < left || mouseX > right || mouseY < top || mouseY > bottom) {
+        if (mouseX < panelLeft || mouseX > panelRight || mouseY < panelTop || mouseY > panelBottom) {
             close()
             return true
         }
 
-        val row = ((mouseY - (top + 220)) / 11.0).toInt()
-        if (row in config.trackedItems.indices) {
-            selectedIndex = row
-            syncFormFromSelected()
-            if (button == 1) widget.toggle(row)
+        val listStartY = panelTop + 150
+        val hit = ((mouseY - listStartY) / 12.0).toInt()
+        if (hit in config.trackedItems.indices) {
+            selectedIndex = hit
+            if (button == 1) {
+                widget.toggle(hit)
+            }
         }
-
         return super.mouseClicked(mouseX, mouseY, button)
     }
 
@@ -166,37 +139,6 @@ class ProfitTrackerConfigScreen(
         config.idleSeconds = idleField.text.toIntOrNull()?.coerceAtLeast(1) ?: config.idleSeconds
         configManager.save(config)
         clientRef.setScreen(null)
-    }
-
-    private fun addField(x: Int, y: Int, w: Int, hint: String, initial: String = ""): TextFieldWidget {
-        val field = TextFieldWidget(textRenderer, x, y, w, 18, Text.literal(hint))
-        field.text = initial
-        field.setChangedListener { touch() }
-        addDrawableChild(field)
-        return field
-    }
-
-    private fun formItem(): TrackedItem? {
-        val id = itemIdField.text.trim().lowercase()
-        val name = displayNameField.text.trim()
-        val value = valueField.text.trim().toLongOrNull()
-        if (id.isBlank() || name.isBlank() || value == null || value < 0) return null
-
-        val existing = if (selectedIndex in config.trackedItems.indices) config.trackedItems[selectedIndex] else null
-        return TrackedItem(id, name, value, existing?.enabled ?: true)
-    }
-
-    private fun syncFormFromSelected() {
-        val item = config.trackedItems.getOrNull(selectedIndex) ?: return
-        itemIdField.text = item.itemId
-        displayNameField.text = item.displayName
-        valueField.text = item.value.toString()
-    }
-
-    private fun clearEditFields() {
-        itemIdField.text = ""
-        displayNameField.text = ""
-        valueField.text = ""
     }
 
     private fun touch() {
