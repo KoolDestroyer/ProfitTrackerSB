@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "profit_tracker",
+  "version": "${version}",
+  "name": "Profit Tracker",
+  "description": "Client-side profit tracking HUD",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.profittracker.client.ProfitTrackerClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "1.21.10",
+    "fabric-api": "*"
+  }
+}
