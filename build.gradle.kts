@@ -8,8 +8,7 @@ version = "1.1.0"
 
 repositories {
     mavenCentral()
-    maven(uri("https://maven.fabricmc.net/"))
-    mavenLocal()
+    maven("https://maven.fabricmc.net/")
 }
 
 dependencies {
