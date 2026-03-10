@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version "2.0.21"
-    id("fabric-loom") version "1.7.4"
+    id("fabric-loom") version "1.8-SNAPSHOT"
 }
 
 group = "com.profittracker"
@@ -8,8 +8,7 @@ version = "1.1.0"
 
 repositories {
     mavenCentral()
-    maven(uri("https://maven.fabricmc.net/"))
-    mavenLocal()
+    maven("https://maven.fabricmc.net/")
 }
 
 dependencies {
